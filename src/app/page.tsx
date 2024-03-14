@@ -8,6 +8,11 @@ import {convertKelvinToCelsius} from "@/utils/convertKelvinToCelsius";
 import formatDateString from "@/utils/formatDateString";
 import WeatherIcon from "@/app/components/WeatherIcon";
 import {getDayOrNightIcon} from "@/utils/getDayOrNightIcon";
+import WeatherDetails from "@/app/components/WeatherDetails";
+import {metersToKilometers} from "@/utils/metersToKilometers";
+import {format, fromUnixTime, parseISO} from "date-fns";
+import {convertWindSpeed} from "@/utils/convertWindSpeed";
+import ForecastWeatherDetail from "@/app/components/ForecastWeatherDetail";
 
 interface WeatherData {
     cod: string;
@@ -72,8 +77,26 @@ export default function Home() {
             return data
         }
     )
+
+    console.log(data)
+
     const firstData = data?.list[0]
-    console.log(data?.list)
+
+    const uniqueDates = [
+        ...new Set(
+            data?.list.map(
+                (entry) => new Date(entry.dt * 1000).toISOString().split("T")[0]
+            )
+        )
+    ]
+
+    const firstDataForEachDate = uniqueDates.map((date) => {
+        return data?.list.find((entry) => {
+            const entryDate = new Date(entry.dt * 1000).toISOString().split("T")[0]
+            const entryTime = new Date(entry.dt).getHours()
+            return entryDate === date && entryTime >= 6
+        })
+    })
 
     if (isLoading) return (
         <div className="flex items-center min-h-screen justify-center">
@@ -128,11 +151,44 @@ export default function Home() {
                         </Container>
                     </div>
                     <div className="flex gap-4">
-
+                        <Container className="w-fit justify-center flex-col px-4 items-center">
+                            <p className="text-center capitalize">{firstData?.weather[0].description}</p>
+                            <WeatherIcon
+                                iconName={getDayOrNightIcon(firstData?.weather[0].icon ?? "", firstData?.dt_txt ?? "")}/>
+                        </Container>
+                        <Container className="bg-yellow-300/80 px-6 gap-4 justify-between overflow-x-auto">
+                            <WeatherDetails
+                                visability={metersToKilometers(firstData?.visibility ?? 10000)}
+                                airPressure={`${firstData?.main.pressure} hPa`}
+                                humidity={`${firstData?.main.humidity}%`}
+                                sunrise={format(fromUnixTime(data?.city.sunrise ?? 1710206112), 'H.mm')}
+                                sunset={format(fromUnixTime(data?.city.sunset ?? 1710206112), 'H.mm')}
+                                windSpeed={convertWindSpeed(firstData?.wind.speed ?? 1.64)}
+                            />
+                        </Container>
                     </div>
                 </section>
                 <section className="flex w-full flex-col gap-4">
                     <p className="text-2xl">Forecast (7 days)</p>
+                    {firstDataForEachDate.map((d, index) => (
+                        <ForecastWeatherDetail
+                            key={index}
+                            description={d?.weather[0].description ?? ""}
+                            weatherIcon={d?.weather[0].icon ?? "01d"}
+                            date={format(parseISO(d?.dt_txt ?? ""), "dd.MM")}
+                            day={format(parseISO(d?.dt_txt ?? ""), "EEEE")}
+                            feels_like={d?.main.feels_like ?? 0}
+                            temp={d?.main.temp ?? 0}
+                            temp_max={d?.main.temp_max ?? 0}
+                            temp_min={d?.main.temp_min ?? 0}
+                            airPressure={`${d?.main.pressure} hPa`}
+                            humidity={`${d?.main.humidity}%`}
+                            sunrise={format(fromUnixTime(data?.city.sunrise ?? 1710206112), "H:mm")}
+                            sunset={format(fromUnixTime(data?.city.sunset ?? 1710206112), "H:mm")}
+                            visability={`${metersToKilometers(d?.visibility ?? 10000)}`}
+                            windSpeed={`${convertWindSpeed(d?.wind.speed ?? 1.64)}`}
+                        />
+                    ))}
                 </section>
             </main>
         </div>
