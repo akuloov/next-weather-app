@@ -13,6 +13,10 @@ import {metersToKilometers} from "@/utils/metersToKilometers";
 import {format, fromUnixTime, parseISO} from "date-fns";
 import {convertWindSpeed} from "@/utils/convertWindSpeed";
 import ForecastWeatherDetail from "@/app/components/ForecastWeatherDetail";
+import {useAtom} from "jotai";
+import {loadingCityAtom, placeAtom} from "@/app/atom";
+import {useEffect} from "react";
+import LoadingSkeleton from "@/app/components/LoadingSkeleton";
 
 interface WeatherData {
     cod: string;
@@ -70,15 +74,20 @@ interface WeatherDetail {
 }
 
 export default function Home() {
-    const {isLoading, error, data} = useQuery<WeatherData>(
+    const [place, setPlace] = useAtom(placeAtom)
+    const [loadingCity] = useAtom(loadingCityAtom)
+
+    const {isLoading, error, data, refetch} = useQuery<WeatherData>(
         'repoData',
         async () => {
-            const {data} = await axios.get(`https://api.openweathermap.org/data/2.5/forecast?q=pune&appid=${process.env.NEXT_PUBLIC_WEATHER_KEY}&cnt=56`)
+            const {data} = await axios.get(`https://api.openweathermap.org/data/2.5/forecast?q=${place}&appid=${process.env.NEXT_PUBLIC_WEATHER_KEY}&cnt=56`)
             return data
         }
     )
 
-    console.log(data)
+    useEffect(() => {
+        refetch()
+    }, [place, refetch])
 
     const firstData = data?.list[0]
 
@@ -98,15 +107,16 @@ export default function Home() {
         })
     })
 
-    if (isLoading) return (
-        <div className="flex items-center min-h-screen justify-center">
+    if (isLoading || loadingCity) return (
+        /*<div className="flex items-center min-h-screen justify-center">
             <p className="animate-bounce">Loading...</p>
-        </div>
+        </div>*/
+        <LoadingSkeleton/>
     )
 
     return (
         <div className="flex flex-col gap-4 bg-gray-100 min-h-screen">
-            <Navbar/>
+            <Navbar location={data?.city.name || place}/>
             <main className="px-3 max-w-7xl mx-auto flex flex-col gap-9 w-full pb-10 pt-4">
                 <section className="space-y-4">
                     <div className="space-y-2">
@@ -154,7 +164,7 @@ export default function Home() {
                         <Container className="w-fit justify-center flex-col px-4 items-center">
                             <p className="text-center capitalize">{firstData?.weather[0].description}</p>
                             <WeatherIcon
-                                iconName={getDayOrNightIcon(firstData?.weather[0].icon ?? "", firstData?.dt_txt ?? "")}/>
+                                iconName={getDayOrNightIcon(firstData?.weather[0].icon ?? "", firstData?.dt_txt ?? place)}/>
                         </Container>
                         <Container className="bg-yellow-300/80 px-6 gap-4 justify-between overflow-x-auto">
                             <WeatherDetails

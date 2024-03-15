@@ -4,13 +4,24 @@ import React, {useState} from 'react';
 import {MdWbSunny, MdMyLocation, MdOutlineLocationOn} from "react-icons/md";
 import SearchBox from "@/app/components/SearchBox";
 import axios from "axios";
+import {useAtom} from "jotai";
+import {loadingCityAtom, placeAtom} from "@/app/atom";
+import {SuggestionBox} from "@/app/components/SuggestionBox";
 
-const Navbar = () => {
+/*type Props = {
+    location: string,
+}*/
+
+const Navbar = ({location}: {location: string}) => {
     const [city, setCity] = useState("")
     const [error, setError] = useState("")
 
     const [suggestions, setSuggestions] = useState<string[]>([])
     const [showSuggestions, setShowSuggestions] = useState(false)
+
+    const [place, setPlace] = useAtom(placeAtom)
+    location = place
+    const [_, setLoadingCity] = useAtom(loadingCityAtom)
 
     const handleInputChange = async (value: string) => {
         setCity(value)
@@ -36,13 +47,39 @@ const Navbar = () => {
         setShowSuggestions(false)
     }
 
-    function handleSubmitSearch (e: React.FormEvent<HTMLFormElement>) {
+    function handleSubmitSearch(e: React.FormEvent<HTMLFormElement>) {
+        setLoadingCity(true)
         e.preventDefault()
         if (suggestions.length === 0) {
             setError("Location not found")
+            setLoadingCity(false)
         } else {
             setError("")
-            setShowSuggestions(false)
+            setTimeout(() => {
+                setLoadingCity(false)
+                setPlace(city)
+                setShowSuggestions(false)
+            }, 500)
+        }
+    }
+
+    const handleCurrentLocation = () => {
+        setLoadingCity(true)
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const {latitude, longitude} = position.coords
+                try {
+                    const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${process.env.NEXT_PUBLIC_WEATHER_KEY}`)
+                    /*setTimeout(() => {
+                        setLoadingCity(false)
+                        setPlace(response.data.name)
+                    }, 500)*/
+                    setLoadingCity(false)
+                    setPlace(response.data.name)
+                } catch (error) {
+                    setLoadingCity(false)
+                }
+            })
         }
     }
 
@@ -54,22 +91,24 @@ const Navbar = () => {
                     <MdWbSunny className="text-3xl mt-1 text-yellow-300"/>
                 </p>
                 <section className="flex gap-2 items-center">
-                    <MdMyLocation className="text-2xl text-gray-400 hover:opacity-80 cursor-pointer transition duration-30"/>
+                    <MdMyLocation
+                        title="Your current location"
+                        onClick={handleCurrentLocation}
+                        className="text-2xl text-gray-400 hover:opacity-80 cursor-pointer transition duration-30"
+                    />
                     <MdOutlineLocationOn className="text-3xl"/>
-                    <p className="text-sm text-slate-900/80">India</p>
-                    <div>
+                    <p className="text-sm text-slate-900/80">{location}</p>
+                    <div className="relative hidden md:flex">
                         <SearchBox
                             value={city}
                             onSubmit={handleSubmitSearch}
                             onChange={e => handleInputChange(e.target.value)}
                         />
                         <SuggestionBox
-                            {...{
-                                showSuggestions,
-                                suggestions,
-                                handleSuggestionClick,
-                                error
-                            }}
+                            showSuggestions={showSuggestions}
+                            suggestions={suggestions}
+                            handleSuggestionClick={handleSuggestionClick}
+                            error={error}
                         />
                     </div>
                 </section>
@@ -77,35 +116,5 @@ const Navbar = () => {
         </nav>
     );
 };
-
-function SuggestionBox({
-                           showSuggestions,
-                           suggestions,
-                           handleSuggestionClick,
-                           error
-                       }: {
-    showSuggestions: boolean,
-    suggestions: string[],
-    handleSuggestionClick: (item: string) => void,
-    error: string
-}) {
-    return (
-        <> {((showSuggestions && suggestions.length > 1) || error) && (
-            <ul className="mb-4 bg-white absolute border top-[60px] border-gray-300 rounded-md min-w-[200px] flex flex-col gap-1 py-2 px-2">
-                {error && suggestions.length < 1 && (<li className="p-1 text-red-500">{error}</li>)}
-                {suggestions.map((item, i) => (
-                    <li
-                        className="p-1 rounded hover:bg-gray-200 cursor-pointer"
-                        key={i}
-                        onClick={() => handleSuggestionClick(item)}
-                    >
-                        {item}
-                    </li>
-                ))}
-            </ul>
-        )}
-        </>
-    )
-}
 
 export default Navbar;
