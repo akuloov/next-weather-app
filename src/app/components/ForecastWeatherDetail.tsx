@@ -26,14 +26,14 @@ const ForecastWeatherDetail = (props: ForecastWeatherDetailProps) => {
     } = props
 
     return (
-        <Container className="gap-4">
-            <section className="flex gap-4 items-center">
-                <div className="flex flex-col items-center ml-1 mb-6">
+        <Container className="gap-4 flex-col sm:flex-row items-center sm:items-stretch pt-0 sm:pt-4">
+            <section className="flex gap-4 items-baseline sm:items-center">
+                <div className="flex flex-col items-center m-0 sm:ml-1 sm:mb-6">
                     <WeatherIcon iconName={weatherIcon}/>
                     <p>{date}</p>
                     <p className="text-sm">{day}</p>
                 </div>
-                <div className="flex flex-col px-4">
+                <div className="flex flex-col items-center sm:px-4">
                     <span className="text-5xl">{convertKelvinToCelsius(temp ?? 0)}°</span>
                     <p className="text-xs space-x-1 whitespace-nowrap">
                         <span>Feels like</span>
@@ -42,7 +42,7 @@ const ForecastWeatherDetail = (props: ForecastWeatherDetailProps) => {
                     <p>{description}</p>
                 </div>
             </section>
-            <section className="flex overflow-x-auto justify-between gap-4 px-4 w-full pr-10">
+            <section className="flex overflow-x-auto justify-between gap-4 px-4 w-full sm:pr-10">
                 <WeatherDetails {...props}/>
             </section>
         </Container>

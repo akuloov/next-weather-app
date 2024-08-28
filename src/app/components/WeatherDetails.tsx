@@ -30,7 +30,6 @@ export interface WeatherDetailProps {
 }
 
 export default function WeatherDetails(props: WeatherDetailProps) {
-
     return <>
         <SingleWeatherDetail
             information="Visability"
